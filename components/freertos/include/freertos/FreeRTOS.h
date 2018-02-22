@@ -98,6 +98,10 @@ extern "C" {
 /* Application specific configuration options. */
 #include "FreeRTOSConfig.h"
 
+#if ( configUSE_TRACE_FACILITY == 1 )
+#include "../../../../firmware/main/trace-recorder/include/trcRecorder.h"
+#endif
+
 /* Basic FreeRTOS definitions. */
 #include "projdefs.h"
 
@@ -637,7 +641,7 @@ extern "C" {
 #ifndef traceTASK_NOTIFY_GIVE_FROM_ISR
  	#define traceTASK_NOTIFY_GIVE_FROM_ISR()
  #endif
- 
+
 #ifndef traceISR_EXIT_TO_SCHEDULER
 	#define traceISR_EXIT_TO_SCHEDULER()
 #endif

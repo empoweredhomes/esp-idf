@@ -33,6 +33,8 @@
 
 #include <stddef.h>
 
+#define JSMN_PARENT_LINKS 1
+
 #ifdef __cplusplus
 extern "C" {
 #endif

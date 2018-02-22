@@ -56,10 +56,10 @@ port_switch_flag:
 *******************************************************************************
 * _frxt_setup_switch
 * void _frxt_setup_switch(void);
-* 
+*
 * Sets an internal flag indicating that a task switch is required on return
 * from interrupt handling.
-* 
+*
 *******************************************************************************
 */
     .global     _frxt_setup_switch
