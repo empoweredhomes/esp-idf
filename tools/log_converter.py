@@ -5,6 +5,7 @@ import collections
 import time
 import datetime
 import sys
+import struct
 
 class LogConverter:
 
@@ -41,6 +42,7 @@ class LogConverter:
             decoded = [ord(c) for c in encodedLog.decode('base64')]
         except __import__('binascii').Error as err:
             print "Unexpected error:", err
+            print message
             return []
 
         # split decoded string into message array
@@ -62,7 +64,7 @@ class LogConverter:
                     message['value'] = ''
 
                     if message['type'] == 1:
-                        message['value'] = decoded[i+10]
+                        message['value'] = int(decoded[i+10])
                     elif message['type'] == 2:
                         message['value'] = decoded[i+13] << 24 | decoded[i+12] << 16 | decoded[i+11] << 8 | decoded[i+10]
                     elif message['type'] == 3:
@@ -70,7 +72,12 @@ class LogConverter:
                     elif message['type'] == 4:
                         stringLength = decoded[i+10]
                         for i in range(11, 11 + stringLength):
-                            message['value'] += chr(decoded[i])
+                            if decoded[i] < 128:
+                                message['value'] += chr(decoded[i])
+                    elif message['type'] == 5:
+                        message['value'] = struct.unpack('f', struct.pack('i', decoded[i+13] << 24 | decoded[i+12] << 16 | decoded[i+11] << 8 | decoded[i+10]))[0]
+                    elif message['type'] == 6:
+                        message['value'] = struct.unpack('d', struct.pack('q', decoded[i+17] << 56 | decoded[i+16] << 48 | decoded[i+15] << 40 | decoded[i+14] << 32 | decoded[i+13] << 24 | decoded[i+12] << 16 | decoded[i+11] << 8 | decoded[i+10]))[0]
 
                     self.MessageLookup(message)
                     messages.append(message)
@@ -78,22 +85,30 @@ class LogConverter:
         return messages
 
     def MessageLookup(self, message):
-        message['componentText'] = self._components.keys()[message['component']]
-        message['codeText'] = 'LOG ERROR: LOOKUP FAILED'
+        try:
+            message['componentText'] = self._components.keys()[message['component']]
+            message['codeText'] = 'LOG ERROR: LOOKUP FAILED'
+            message['level'] = ''
+            i = 0
+            for level in ['critical', 'debug', 'error', 'info', 'warning']:
+                if i + len(self._components[message['componentText']][level].keys()) > message['code']:
+                    message['codeText'] = self._components[message['componentText']][level].values()[message['code'] - i]
+                    message['codeText'] = message['codeText'].replace('{uint8}', str(message['value']))
+                    message['codeText'] = message['codeText'].replace('{int32}', str(message['value']))
+                    message['codeText'] = message['codeText'].replace('{int64}', str(message['value']))
+                    message['codeText'] = message['codeText'].replace('{string}', str(message['value']))
+                    message['codeText'] = message['codeText'].replace('{float}', str(message['value']))
+                    message['codeText'] = message['codeText'].replace('{double}', str(message['value']))
+                    message['level'] = level
+                    break
+                else:
+                    i += len(self._components[message['componentText']][level].keys())
 
-        i = 0
-        for level in ['critical', 'debug', 'error', 'info', 'warning']:
-            if i + len(self._components[message['componentText']][level].keys()) > message['code']:
-                message['codeText'] = self._components[message['componentText']][level].values()[message['code'] - i]
-                message['codeText'] = message['codeText'].replace('{uint8}', str(message['value']))
-                message['codeText'] = message['codeText'].replace('{int32}', str(message['value']))
-                message['codeText'] = message['codeText'].replace('{int64}', str(message['value']))
-                message['codeText'] = message['codeText'].replace('{string}', str(message['value']))
-                message['level'] = level
-                break
-            else:
-                i += len(self._components[message['componentText']][level].keys())
-
+            if message['level'] == '':
+                print message
+        except:
+            print 'ERROR: Log converter caught exception in MessageLookup'
+            print message
     def FormatMessage(self, message):
         return message['timeText'] + ' | ' + message['level'].upper().ljust(8) + " | " + (message['componentText'].title() + "." + str(message['line'])).ljust(14) + ' | ' + message['codeText']
 
