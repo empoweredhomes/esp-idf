@@ -114,7 +114,11 @@ static __attribute__((unused)) bool is_safe_write_address(size_t addr, size_t si
     }
 
     const esp_partition_t *p = esp_ota_get_running_partition();
-    if (addr >= p->address && addr < p->address + p->size) {
+
+//    ESP_LOGI("flash_ops", "addr: %x, size: %x", addr, size)
+//    ESP_LOGI("flash_ops", "p->addr: %x, p->size: %x", p->address, p->size)
+
+    if (addr >= p->address && addr < p->address + p->size - CONFIG_WRITABLE_FACTORY_SIZE) {
         UNSAFE_WRITE_ADDRESS;
     }
     if (addr < p->address && addr + size > p->address) {
