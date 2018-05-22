@@ -18,11 +18,11 @@ class LogConverter:
         self._data = {}
         self._components = {}
 
-    def sortDict(self, od):
+    def __sortDict(self, od):
         res = collections.OrderedDict()
-        for k, v in sorted(od.items(), key=lambda t: t[0]):
+        for k, v in sorted(od.items(), key=lambda t: t[0].lower().replace("_", "}")):
             if isinstance(v, dict):
-                res[k] = self.sortDict(v)
+                res[k] = self.__sortDict(v)
             else:
                 res[k] = v
         return res
@@ -31,8 +31,8 @@ class LogConverter:
 
         self._data = json.load(open(filename))
         # sort dictionary alphabetically to match the message indices
-        self._components = self.sortDict(self._data['log']['components'])
-        #print(json.dumps(self._components, indent=4))
+        self._components = self.__sortDict(self._data['log']['components'])
+        print(json.dumps(self._components, indent=4))
 
     def ParseEncoded(self, encodedLog):
 
@@ -44,6 +44,8 @@ class LogConverter:
             print "Unexpected error:", err
             print message
             return []
+
+        #print decoded
 
         # split decoded string into message array
         messages = []
