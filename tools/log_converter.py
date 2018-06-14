@@ -1,4 +1,3 @@
-
 import base64
 import json
 import collections
@@ -20,7 +19,8 @@ class LogConverter:
 
     def __sortDict(self, od):
         res = collections.OrderedDict()
-        for k, v in sorted(od.items(), key=lambda t: t[0].lower().replace("_", "}")):
+        #.lower().replace("_", "}")
+        for k, v in sorted(od.items(), key=lambda t: t[0]):
             if isinstance(v, dict):
                 res[k] = self.__sortDict(v)
             else:
@@ -32,7 +32,7 @@ class LogConverter:
         self._data = json.load(open(filename))
         # sort dictionary alphabetically to match the message indices
         self._components = self.__sortDict(self._data['log']['components'])
-        print(json.dumps(self._components, indent=4))
+        #print(json.dumps(self._components, indent=4))
 
     def ParseEncoded(self, encodedLog):
 
