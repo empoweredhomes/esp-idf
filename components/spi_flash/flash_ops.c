@@ -106,6 +106,14 @@ static const spi_flash_guard_funcs_t *s_flash_guard_ops;
     } while(0)
 #endif // CONFIG_SPI_FLASH_WRITING_DANGEROUS_REGIONS_ALLOWED
 
+// These are specific to MYSA
+// Enables a writable section at the end of the factory partition
+bool __FLASH_OPS_WRITABLE_FACTORY__ = false;
+size_t __FLASH_OPS_WRITABLE_START__ = 0;
+size_t __FLASH_OPS_WRITABLE_SIZE__ = 0;
+
+#include "log_common.h"
+
 static __attribute__((unused)) bool is_safe_write_address(size_t addr, size_t size)
 {
     bool result = true;
@@ -113,12 +121,18 @@ static __attribute__((unused)) bool is_safe_write_address(size_t addr, size_t si
         UNSAFE_WRITE_ADDRESS;
     }
 
+    if (addr >= __FLASH_OPS_WRITABLE_START__ && addr < __FLASH_OPS_WRITABLE_START__ + __FLASH_OPS_WRITABLE_SIZE__)
+    {
+        if (!__FLASH_OPS_WRITABLE_FACTORY__) {
+            LOG_ERROR_FLASH_OPS_REJECTED_int32(&addr);
+            ESP_LOGE(TAG, "Attempted write to factory space rejected. %d, %d", addr, size);
+        }
+        return __FLASH_OPS_WRITABLE_FACTORY__;
+    }
+
     const esp_partition_t *p = esp_ota_get_running_partition();
 
-//    ESP_LOGI("flash_ops", "addr: %x, size: %x", addr, size)
-//    ESP_LOGI("flash_ops", "p->addr: %x, p->size: %x", p->address, p->size)
-
-    if (addr >= p->address && addr < p->address + p->size - CONFIG_WRITABLE_FACTORY_SIZE) {
+    if (addr >= p->address && addr < p->address + p->size) {
         UNSAFE_WRITE_ADDRESS;
     }
     if (addr < p->address && addr + size > p->address) {
