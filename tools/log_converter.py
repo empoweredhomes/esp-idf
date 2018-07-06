@@ -86,9 +86,18 @@ class LogConverter:
 
         return messages
 
+    def FindComponent(self, index):
+        # if indexes are provied use those, else use the alphabetical sort.
+        if 'index' in self._components.values()[0]:
+            for k, v in self._components.iteritems():
+                if v['index'] == index:
+                    return k
+        else:
+            return self._components.keys()[index]
+
     def MessageLookup(self, message):
         try:
-            message['componentText'] = self._components.keys()[message['component']]
+            message['componentText'] = self.FindComponent(message['component'])
             message['codeText'] = 'LOG ERROR: LOOKUP FAILED'
             message['level'] = ''
             i = 0

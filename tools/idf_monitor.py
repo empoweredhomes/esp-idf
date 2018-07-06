@@ -293,17 +293,18 @@ class Monitor(object):
                             messages = self.log_converter.ParseEncoded(line[index+9:])
                             for message in messages:
                                 color = ANSI_GREEN
-                                if message['level'] == 'warning':
-                                    color = ANSI_YELLOW
-                                elif message['level'] == 'critical':
-                                    color = ANSI_RED
-                                elif message['level'] == 'error':
-                                    color = ANSI_MAGENTA
-                                elif message['level'] == 'debug':
-                                    color = ANSI_BLUE
-                                else:
-                                    color = ANSI_GREEN
-                                self.console.write(color + self.log_converter.FormatMessage(message) + '\n')
+                                if 'level' in message:
+                                    if message['level'] == 'warning':
+                                        color = ANSI_YELLOW
+                                    elif message['level'] == 'critical':
+                                        color = ANSI_RED
+                                    elif message['level'] == 'error':
+                                        color = ANSI_MAGENTA
+                                    elif message['level'] == 'debug':
+                                        color = ANSI_BLUE
+                                    else:
+                                        color = ANSI_GREEN
+                                    self.console.write(color + self.log_converter.FormatMessage(message) + '\n')
                             #self.handle_serial_input(line + '\n')
                         else:
                             self.handle_serial_input(line + '\n')
