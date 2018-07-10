@@ -24,6 +24,8 @@
 #include "esp_system.h"
 #include "driver/rtc_cntl.h"
 #include "freertos/FreeRTOS.h"
+#include "soc/efuse_reg.h"
+#include "esp_log.h"
 
 #ifdef CONFIG_BROWNOUT_DET_LVL
 #define BROWNOUT_DET_LVL CONFIG_BROWNOUT_DET_LVL
@@ -48,12 +50,33 @@ static void rtc_brownout_isr_handler()
 
 void esp_brownout_init()
 {
-    REG_WRITE(RTC_CNTL_BROWN_OUT_REG,
-            RTC_CNTL_BROWN_OUT_ENA /* Enable BOD */
-            | RTC_CNTL_BROWN_OUT_PD_RF_ENA /* Automatically power down RF */
-            /* Reset timeout must be set to >1 even if BOR feature is not used */
-            | (2 << RTC_CNTL_BROWN_OUT_RST_WAIT_S)
-            | (BROWNOUT_DET_LVL << RTC_CNTL_DBROWN_OUT_THRES_S));
+    uint8_t esp_rev =
+            (uint8_t) (((unsigned int) REG_READ(EFUSE_BLK0_RDATA3_REG) >> (unsigned int) 15) & (unsigned int) 0x01);
+
+    if(esp_rev != 0){
+
+        ESP_EARLY_LOGI("cpu_start", "Detected Revision 1 - Enabling brownout reset.");
+
+        REG_WRITE(RTC_CNTL_BROWN_OUT_REG,
+                  RTC_CNTL_BROWN_OUT_RST_ENA |
+                  RTC_CNTL_BROWN_OUT_ENA /* Enable BOD */
+                  | RTC_CNTL_BROWN_OUT_PD_RF_ENA /* Automatically power down RF */
+                  /* Reset timeout must be set to >1 even if BOR feature is not used */
+                  | (2 << RTC_CNTL_BROWN_OUT_RST_WAIT_S)
+                  | (BROWNOUT_DET_LVL << RTC_CNTL_DBROWN_OUT_THRES_S));
+
+    } else {
+
+        ESP_EARLY_LOGI("cpu_start", "Detected Revision 0 - Disabling brownout reset.");
+
+        REG_WRITE(RTC_CNTL_BROWN_OUT_REG,
+                  RTC_CNTL_BROWN_OUT_ENA /* Enable BOD */
+                  | RTC_CNTL_BROWN_OUT_PD_RF_ENA /* Automatically power down RF */
+                  /* Reset timeout must be set to >1 even if BOR feature is not used */
+                  | (2 << RTC_CNTL_BROWN_OUT_RST_WAIT_S)
+                  | (BROWNOUT_DET_LVL << RTC_CNTL_DBROWN_OUT_THRES_S));
+
+    }
 
     ESP_ERROR_CHECK( rtc_isr_register(rtc_brownout_isr_handler, NULL, RTC_CNTL_BROWN_OUT_INT_ENA_M) );
 
