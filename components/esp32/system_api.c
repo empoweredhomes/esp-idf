@@ -23,6 +23,7 @@
 #include "rom/efuse.h"
 #include "rom/cache.h"
 #include "rom/uart.h"
+#include "rom/gpio.h"
 #include "soc/dport_reg.h"
 #include "soc/gpio_reg.h"
 #include "soc/efuse_reg.h"
@@ -227,7 +228,7 @@ esp_err_t esp_read_mac(uint8_t* mac, esp_mac_type_t type)
         ESP_LOGW(TAG, "incorrect mac type");
         break;
     }
-  
+
     return ESP_OK;
 }
 
@@ -260,6 +261,8 @@ void IRAM_ATTR esp_restart(void)
     esp_restart_noos();
 }
 
+volatile int __GPIO_25_INIT__ = 0;
+
 /* "inner" restart function for after RTOS, interrupts & anything else on this
  * core are already stopped. Stalls other core, resets hardware,
  * triggers restart.
@@ -268,6 +271,13 @@ void IRAM_ATTR esp_restart_noos()
 {
     // Disable interrupts
     xt_ints_off(0xFFFFFFFF);
+
+    // Disable the RTC Watchdog before re-enabling it
+    WRITE_PERI_REG(RTC_CNTL_WDTWPROTECT_REG, RTC_CNTL_WDT_WKEY_VALUE);
+    WRITE_PERI_REG(RTC_CNTL_WDTFEED_REG, RTC_CNTL_WDT_FEED);
+    REG_SET_FIELD(RTC_CNTL_WDTCONFIG0_REG, RTC_CNTL_WDT_STG0, RTC_WDT_STG_SEL_OFF);
+    REG_CLR_BIT(RTC_CNTL_WDTCONFIG0_REG, RTC_CNTL_WDT_EN);
+    WRITE_PERI_REG(RTC_CNTL_WDTWPROTECT_REG, 0);
 
     // Enable RTC watchdog for 1 second
     REG_WRITE(RTC_CNTL_WDTWPROTECT_REG, RTC_CNTL_WDT_WKEY_VALUE);
@@ -288,6 +298,10 @@ void IRAM_ATTR esp_restart_noos()
     esp_cpu_reset(other_core_id);
     esp_cpu_stall(other_core_id);
 
+    // Other core is stalled and interrupts are disabled, pull GPIO 25 to 0 to prevent triac from getting stuck on.
+    if(__GPIO_25_INIT__) {
+        gpio_set_level(GPIO_NUM_25, 0);
+    }
     // Other core is now stalled, can access DPORT registers directly
     esp_dport_access_int_abort();
 
@@ -318,10 +332,10 @@ void IRAM_ATTR esp_restart_noos()
     WRITE_PERI_REG(GPIO_FUNC5_IN_SEL_CFG_REG, 0x30);
 
     // Reset wifi/bluetooth/ethernet/sdio (bb/mac)
-    DPORT_SET_PERI_REG_MASK(DPORT_CORE_RST_EN_REG, 
+    DPORT_SET_PERI_REG_MASK(DPORT_CORE_RST_EN_REG,
          DPORT_BB_RST | DPORT_FE_RST | DPORT_MAC_RST |
          DPORT_BT_RST | DPORT_BTMAC_RST | DPORT_SDIO_RST |
-         DPORT_SDIO_HOST_RST | DPORT_EMAC_RST | DPORT_MACPWR_RST | 
+         DPORT_SDIO_HOST_RST | DPORT_EMAC_RST | DPORT_MACPWR_RST |
          DPORT_RW_BTMAC_RST | DPORT_RW_BTLP_RST);
     DPORT_REG_WRITE(DPORT_CORE_RST_EN_REG, 0);
 
