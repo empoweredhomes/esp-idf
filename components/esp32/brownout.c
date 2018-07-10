@@ -43,7 +43,7 @@ static void rtc_brownout_isr_handler()
     /* Stall the other CPU to make sure the code running there doesn't use UART
      * at the same time as the following ets_printf.
      */
-    esp_cpu_stall(!xPortGetCoreID());
+    //esp_cpu_stall(!xPortGetCoreID());
     ets_printf("\r\nBrownout detector was triggered\r\n\r\n");
     esp_restart_noos();
 }
