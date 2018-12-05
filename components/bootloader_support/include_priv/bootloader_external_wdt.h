@@ -12,7 +12,7 @@
  */
 
 #define BOOTLOADER_EXTERNAL_WDT_GPIO 26 //WARNING: This pin cannot be changed without modifying the init function first.
-#define BOOTLOADER_EXTERNAL_WDT_MAX 20
+#define BOOTLOADER_EXTERNAL_WDT_MAX 40
 
 /**
  * @brief Initialize the GPIO pin for the external Watchdog Timer.

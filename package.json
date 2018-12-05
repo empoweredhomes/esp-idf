@@ -1,0 +1,19 @@
+{
+  "name": "@mysa/esp-idf",
+  "version": "2.1.0-2",
+  "description": "Custom Version of the ESP-IDF with changes for Mysa Thermostat Firmware.",
+  "main": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/empoweredhomes/esp-idf.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/empoweredhomes/esp-idf/issues"
+  },
+  "homepage": "https://github.com/empoweredhomes/esp-idf#readme"
+}
