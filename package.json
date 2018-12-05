@@ -1,6 +1,6 @@
 {
   "name": "@mysa/esp-idf",
-  "version": "2.1.0-2",
+  "version": "2.1.0-3",
   "description": "Custom Version of the ESP-IDF with changes for Mysa Thermostat Firmware.",
   "main": "",
   "scripts": {
