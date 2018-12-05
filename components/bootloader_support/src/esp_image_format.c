@@ -23,6 +23,8 @@
 #include <bootloader_random.h>
 #include <bootloader_sha.h>
 
+#include "bootloader_external_wdt.h"
+
 static const char *TAG = "esp_image";
 
 #define HASH_LEN 32 /* SHA-256 digest length */
@@ -99,6 +101,8 @@ esp_err_t esp_image_load(esp_image_load_mode_t mode, const esp_partition_pos_t *
         goto err;
     }
 
+    bootloader_external_wdt_toggle();
+
     // Calculate SHA-256 of image if secure boot is on, or if image has a hash appended
 #ifdef CONFIG_SECURE_BOOT_ENABLED
     if (1) {
@@ -120,8 +124,11 @@ esp_err_t esp_image_load(esp_image_load_mode_t mode, const esp_partition_pos_t *
              data->image.entry_addr);
 
     err = verify_image_header(data->start_addr, &data->image, silent);
+
+    bootloader_external_wdt_toggle();
+
     if (err != ESP_OK) {
-goto err;
+        goto err;
     }
 
     if (data->image.segment_count > ESP_IMAGE_MAX_SEGMENTS) {

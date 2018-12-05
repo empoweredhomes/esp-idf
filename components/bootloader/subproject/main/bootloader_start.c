@@ -49,6 +49,8 @@
 #include "bootloader_random.h"
 #include "bootloader_config.h"
 
+#include "bootloader_external_wdt.h"
+
 #include "flash_qio_mode.h"
 
 extern int _bss_start;
@@ -374,11 +376,14 @@ static bool try_load_partition(const esp_partition_pos_t *partition, esp_image_m
         return false;
     }
 
+    bootloader_external_wdt_toggle();
     if (esp_image_load(ESP_IMAGE_LOAD, partition, data) == ESP_OK) {
         ESP_LOGI(TAG, "Loaded app from partition at offset 0x%x",
                  partition->offset);
+        bootloader_external_wdt_toggle();
         return true;
     }
+    bootloader_external_wdt_toggle();
 
     return false;
 }
@@ -445,6 +450,14 @@ static bool load_boot_image(const bootloader_state_t *bs, int start_index, esp_i
 
 void bootloader_main()
 {
+    /*
+     * CUSTOM CODE: Some Mysas include an external watchdog timer to prevent boot lockups, but the bootloader stage of
+     * the ESP32 may take longer than 1.2 seconds, therefore we need to make it available for feeding as early as
+     * possible.
+     */
+    bootloader_external_wdt_init();
+    bootloader_external_wdt_toggle();
+
     vddsdio_configure();
     flash_gpio_configure();
     clock_configure();
@@ -474,7 +487,7 @@ void bootloader_main()
     REG_SET_FIELD(RTC_CNTL_WDTCONFIG0_REG, RTC_CNTL_WDT_CPU_RESET_LENGTH, 7);
     REG_SET_FIELD(RTC_CNTL_WDTCONFIG0_REG, RTC_CNTL_WDT_STG0, RTC_WDT_STG_SEL_RESET_RTC);
 
-    WRITE_PERI_REG(RTC_CNTL_WDTCONFIG1_REG, rtc_clk_slow_freq_get_hz() * 5);
+    WRITE_PERI_REG(RTC_CNTL_WDTCONFIG1_REG, rtc_clk_slow_freq_get_hz() * 10);
     REG_SET_BIT(RTC_CNTL_WDTCONFIG0_REG, RTC_CNTL_WDT_EN);
     WRITE_PERI_REG(RTC_CNTL_WDTWPROTECT_REG, 0);
 
@@ -514,11 +527,16 @@ void bootloader_main()
     if (boot_index == INVALID_INDEX) {
         return; // Unrecoverable failure (not due to corrupt ota data or bad partition contents)
     }
+
+    bootloader_external_wdt_toggle();
+
     // Start from the default, look for the first bootable partition
     esp_image_metadata_t image_data;
     if (!load_boot_image(&bs, boot_index, &image_data)) {
         return;
     }
+
+    bootloader_external_wdt_toggle();
 
 #ifdef CONFIG_SECURE_BOOT_ENABLED
     /* Generate secure digest from this bootloader to protect future
@@ -555,6 +573,8 @@ void bootloader_main()
 
     ESP_LOGI(TAG, "Disabling RNG early entropy source...");
     bootloader_random_disable();
+
+    bootloader_external_wdt_toggle();
 
     // copy loaded segments to RAM, set up caches for mapped segments, and start application
     unpack_load_app(&image_data);
