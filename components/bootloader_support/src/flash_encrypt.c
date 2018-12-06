@@ -28,6 +28,8 @@
 #include "rom/cache.h"
 #include "rom/spi_flash.h"   /* TODO: Remove this */
 
+#include "soc/rtc_cntl_reg.h"
+
 static const char *TAG = "flash_encrypt";
 
 /* Static functions for stages of flash encryption */
@@ -55,6 +57,14 @@ esp_err_t esp_flash_encrypt_check_and_update(void)
         return ESP_OK;
     }
     else {
+
+        // Disable RTC timer during the flash encryption.
+        WRITE_PERI_REG(RTC_CNTL_WDTWPROTECT_REG, RTC_CNTL_WDT_WKEY_VALUE);
+        WRITE_PERI_REG(RTC_CNTL_WDTFEED_REG, RTC_CNTL_WDT_FEED);
+        REG_SET_FIELD(RTC_CNTL_WDTCONFIG0_REG, RTC_CNTL_WDT_STG0, RTC_WDT_STG_SEL_OFF);
+        REG_CLR_BIT(RTC_CNTL_WDTCONFIG0_REG, RTC_CNTL_WDT_EN);
+        WRITE_PERI_REG(RTC_CNTL_WDTWPROTECT_REG, 0);
+
         /* Flash is not encrypted, so encrypt it! */
         return encrypt_flash_contents(flash_crypt_cnt, flash_crypt_wr_dis);
     }
