@@ -125,10 +125,8 @@ esp_err_t esp_image_load(esp_image_load_mode_t mode, const esp_partition_pos_t *
 
     err = verify_image_header(data->start_addr, &data->image, silent);
 
-    bootloader_external_wdt_toggle();
-
     if (err != ESP_OK) {
-        goto err;
+goto err;
     }
 
     if (data->image.segment_count > ESP_IMAGE_MAX_SEGMENTS) {

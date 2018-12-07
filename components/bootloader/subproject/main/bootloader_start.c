@@ -450,14 +450,6 @@ static bool load_boot_image(const bootloader_state_t *bs, int start_index, esp_i
 
 void bootloader_main()
 {
-    /*
-     * CUSTOM CODE: Some Mysas include an external watchdog timer to prevent boot lockups, but the bootloader stage of
-     * the ESP32 may take longer than 1.2 seconds, therefore we need to make it available for feeding as early as
-     * possible.
-     */
-    bootloader_external_wdt_init();
-    bootloader_external_wdt_toggle();
-
     vddsdio_configure();
     flash_gpio_configure();
     clock_configure();
@@ -472,6 +464,14 @@ void bootloader_main()
 
     ESP_LOGI(TAG, "compile time " __TIME__ );
     ets_set_appcpu_boot_addr(0);
+
+    /*
+     * CUSTOM CODE: Some Mysas include an external watchdog timer to prevent boot lockups, but the bootloader stage of
+     * the ESP32 may take longer than 1.2 seconds, therefore we need to make it available for feeding as early as
+     * possible.
+     */
+    bootloader_external_wdt_init();
+    bootloader_external_wdt_toggle();
 
     /* disable watch dog here */
     REG_CLR_BIT( RTC_CNTL_WDTCONFIG0_REG, RTC_CNTL_WDT_FLASHBOOT_MOD_EN );
