@@ -107,6 +107,8 @@ const void *bootloader_mmap(uint32_t src_addr, uint32_t size)
         return NULL;
     }
 
+    bootloader_external_wdt_toggle();
+
     uint32_t src_addr_aligned = src_addr & MMU_FLASH_MASK;
     uint32_t count = (size + (src_addr - src_addr_aligned) + 0xffff) / MMU_BLOCK_SIZE;
     Cache_Read_Disable(0);

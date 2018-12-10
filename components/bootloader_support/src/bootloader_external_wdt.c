@@ -2,23 +2,29 @@
 
 #include "stdint.h" // Must be included before gpio_struct.h
 
-#include "soc/gpio_struct.h"
+#include "rom/gpio.h"
+#include "soc/gpio_sig_map.h"
 #include "soc/io_mux_reg.h"
 
+/*
+ * Define the pin to be used for the Watchdog timer.
+ * IMPORTANT: All three of these values must match the specific GPIO pin that you wish to use.
+ */
+#define BOOTLOADER_EXTERNAL_WDT_GPIO_NUM 26
+#define BOOTLOADER_EXTERNAL_WDT_GPIO_REG PERIPHS_IO_MUX_GPIO26_U
+#define BOOTLOADER_EXTERNAL_WDT_GPIO_FUNC FUNC_GPIO26_GPIO26
+
+#define BOOTLOADER_EXTERNAL_WDT_MAX 40
+
 void bootloader_external_wdt_init() {
-    uint32_t pin_function = 0;
+    /* Use pin as a GPIO */
+    PIN_FUNC_SELECT(BOOTLOADER_EXTERNAL_WDT_GPIO_REG, BOOTLOADER_EXTERNAL_WDT_GPIO_FUNC);
 
-    GPIO.enable_w1ts = ((uint32_t) 1 << BOOTLOADER_EXTERNAL_WDT_GPIO);
+    /* Make sure the pin is not set up as an input pin */
+    PIN_INPUT_DISABLE(BOOTLOADER_EXTERNAL_WDT_GPIO_REG);
 
-    pin_function |= ((uint32_t) 2 << FUN_DRV_S);  //what are the drivers?
-    pin_function |= FUN_IE;  //input enable but required for output as well?
-
-    pin_function |= ((uint32_t) (0x02 >> 5) << MCU_SEL_S); // 0x02 is OUTPUT
-
-    // WARNING: GPIO cannot be changed without modifying this register first.
-    *((volatile uint32_t *)(DR_REG_IO_MUX_BASE + 0x28)) = pin_function;
-
-    GPIO.pin[BOOTLOADER_EXTERNAL_WDT_GPIO].val = 0;
+    /* bind pin as an output GPIO in the IO matrix */
+    gpio_matrix_out(BOOTLOADER_EXTERNAL_WDT_GPIO_NUM, SIG_GPIO_OUT_IDX, 0, 0);
 }
 
 void bootloader_external_wdt_toggle() {
@@ -27,10 +33,16 @@ void bootloader_external_wdt_toggle() {
         max--;
         static uint8_t current = 0;
         current = (uint8_t) !current;
+
+        /*
+         * Read in the current value if the GPIO out reg and set/clear the GPIO pin.
+         * IMPORTANT: This is not thread safe so DO NOT use outside of bootloader.
+         */
+        uint32_t out_reg = REG_READ(GPIO_OUT_REG);
         if (current) {
-            GPIO.out_w1ts = ((uint32_t) 1 << BOOTLOADER_EXTERNAL_WDT_GPIO);
+            REG_WRITE(GPIO_OUT_REG, out_reg | BIT(BOOTLOADER_EXTERNAL_WDT_GPIO_NUM)); // Set GPIO26 ON
         } else {
-            GPIO.out_w1tc = ((uint32_t) 1 << BOOTLOADER_EXTERNAL_WDT_GPIO);
+            REG_WRITE(GPIO_OUT_REG, out_reg & ~BIT(BOOTLOADER_EXTERNAL_WDT_GPIO_NUM)); // Set GPIO26 OFF
         }
-   }
+    }
 }
