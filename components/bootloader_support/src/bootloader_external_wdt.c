@@ -6,13 +6,22 @@
 #include "soc/gpio_sig_map.h"
 #include "soc/io_mux_reg.h"
 
+// TODO: pull this from menuconfig
+#define MYSA_PRODUCT_IS_INF 1
+
 /*
  * Define the pin to be used for the Watchdog timer.
  * IMPORTANT: All three of these values must match the specific GPIO pin that you wish to use.
  */
+#if MYSA_PRODUCT_IS_INF
+#define BOOTLOADER_EXTERNAL_WDT_GPIO_NUM 32
+#define BOOTLOADER_EXTERNAL_WDT_GPIO_REG PERIPHS_IO_MUX_GPIO32_U
+#define BOOTLOADER_EXTERNAL_WDT_GPIO_FUNC FUNC_GPIO32_GPIO32
+#else
 #define BOOTLOADER_EXTERNAL_WDT_GPIO_NUM 26
 #define BOOTLOADER_EXTERNAL_WDT_GPIO_REG PERIPHS_IO_MUX_GPIO26_U
 #define BOOTLOADER_EXTERNAL_WDT_GPIO_FUNC FUNC_GPIO26_GPIO26
+#endif
 
 #define BOOTLOADER_EXTERNAL_WDT_MAX 40
 
@@ -38,11 +47,21 @@ void bootloader_external_wdt_toggle() {
          * Read in the current value if the GPIO out reg and set/clear the GPIO pin.
          * IMPORTANT: This is not thread safe so DO NOT use outside of bootloader.
          */
+#if BOOTLOADER_EXTERNAL_WDT_GPIO_NUM < 32
         uint32_t out_reg = REG_READ(GPIO_OUT_REG);
         if (current) {
             REG_WRITE(GPIO_OUT_REG, out_reg | BIT(BOOTLOADER_EXTERNAL_WDT_GPIO_NUM)); // Set GPIO26 ON
         } else {
             REG_WRITE(GPIO_OUT_REG, out_reg & ~BIT(BOOTLOADER_EXTERNAL_WDT_GPIO_NUM)); // Set GPIO26 OFF
         }
+
+#else // GPIO >= 32 are handled by a different register
+        uint32_t out_reg = REG_READ(GPIO_OUT1_REG);
+        if (current) {
+            REG_WRITE(GPIO_OUT1_REG, out_reg | BIT(BOOTLOADER_EXTERNAL_WDT_GPIO_NUM - 32)); // Set GPIO ON
+        } else {
+            REG_WRITE(GPIO_OUT1_REG, out_reg & ~BIT(BOOTLOADER_EXTERNAL_WDT_GPIO_NUM - 32)); // Set GPIO OFF
+        }
+#endif
     }
 }
